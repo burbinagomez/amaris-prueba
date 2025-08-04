@@ -242,13 +242,12 @@ resource "aws_apigatewayv2_stage" "dev" {
   auto_deploy   = true 
 }
 
-# --- Permisos para que API Gateway invoque a las Lambdas (CORREGIDO) ---
+# --- Permisos para que API Gateway invoque a las Lambdas ---
 resource "aws_lambda_permission" "fondos_permission" {
   statement_id  = "AllowExecutionFromAPIGatewayV2-fondos"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.fondos.function_name
   principal     = "apigateway.amazonaws.com"
-  
   source_arn = "${aws_apigatewayv2_api.api_gateway.execution_arn}/*"
 }
 
@@ -257,7 +256,6 @@ resource "aws_lambda_permission" "subscribe_permission" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.subscribe.function_name
   principal     = "apigateway.amazonaws.com"
-  
   source_arn = "${aws_apigatewayv2_api.api_gateway.execution_arn}/*"
 }
 
@@ -266,7 +264,6 @@ resource "aws_lambda_permission" "transactions_permission" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.transactions.function_name
   principal     = "apigateway.amazonaws.com"
-  
   source_arn = "${aws_apigatewayv2_api.api_gateway.execution_arn}/*"
 }
 
@@ -314,6 +311,9 @@ resource "aws_s3_object" "index_html" {
   source       = "index.html"
   acl          = "public-read"
   content_type = "text/html"
+  
+  # CORRECCIÓN: Agregar un hash al archivo para forzar la actualización en S3
+  etag = filemd5("index.html")
 }
 
 # --- Outputs ---
