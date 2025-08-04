@@ -58,8 +58,7 @@ def lambda_handler(event, context):
             }
         )
 
-        if user.get("Item", user.get("Attributes")).get("saldo")["N"] >= fondo.get("Item",{}).get("monto_minimo")["N"]:
-            transaction = dynamo.get_item(TableName="transactions",Key={
+        transaction = dynamo.get_item(TableName="transactions",Key={
                 "user": {
                     "S": user.get("Item", user.get("Attributes")).get("cedula")["S"]
                 },
@@ -70,7 +69,20 @@ def lambda_handler(event, context):
                     "S": fondo.get("Item",{}).get("nombre")["S"]
                 },
             })
-            if not transaction.get("Item"):
+
+        if not transaction.get("Item"):
+            if user.get("Item", user.get("Attributes")).get("saldo")["N"] >= fondo.get("Item",{}).get("monto_minimo")["N"]:
+                transaction = dynamo.get_item(TableName="transactions",Key={
+                    "user": {
+                        "S": user.get("Item", user.get("Attributes")).get("cedula")["S"]
+                    },
+                    "tipo_transaccion": {
+                        "S": "APERTURA"
+                    },
+                    "fondo": {
+                        "S": fondo.get("Item",{}).get("nombre")["S"]
+                    },
+                })
                 transaction_id = str(uuid.uuid4())
                 transaction = dynamo.put_item(
                     TableName="transactions",
@@ -111,34 +123,35 @@ def lambda_handler(event, context):
                     'body': json.dumps({"message":"Apertura creada correctamente, mas informacion sera enviada a su correo"})
                 }
             else:
-                transaction = dynamo.put_item(
-                    TableName="transactions",
-                    Item={
-                        "id": {
-                            "S": transaction_id
-                        },
-                        "user": {
-                            "S": user.get("Item", user.get("Attributes")).get("cedula")["S"]
-                        },
-                        "fondo": {
-                            "S": fondo.get("Item",{}).get("nombre")["S"]
-                        },
-                        "tipo_transaccion": {
-                            "S": "deposito"
-                        },
-                        "monto": {
-                            "N": str(transaction.get("Item",{}).get("monto")["N"] + request_data.get("saldo"))
-                        }
-                    },
-                    ReturnValues= "ALL_OLD" 
-                )
                 return {
-                    'statusCode': 200,
-                    'body': json.dumps({"message":"Deposito completado"})
+                    'statusCode': 400,
+                    'body': json.dumps({"message":f"No tiene saldo disponible para vincularse al fondo {fondo.get('Item',{}).get('nombre')['S']}."})
                 }
         else:
+            transaction = dynamo.put_item(
+                TableName="transactions",
+                Item={
+                    "id": {
+                        "S": transaction_id
+                    },
+                    "user": {
+                        "S": user.get("Item", user.get("Attributes")).get("cedula")["S"]
+                    },
+                    "fondo": {
+                        "S": fondo.get("Item",{}).get("nombre")["S"]
+                    },
+                    "tipo_transaccion": {
+                        "S": "DEPOSITO"
+                    },
+                    "monto": {
+                        "N": str(transaction.get("Item",{}).get("monto")["N"] + request_data.get("saldo"))
+                    }
+                },
+                ReturnValues= "ALL_OLD" 
+            )
             return {
                 'statusCode': 200,
-                'body': json.dumps({"message":f"No tiene saldo disponible para vincularse al fondo {fondo.get('Item',{}).get('nombre')['S']}."})
+                'body': json.dumps({"message":"Deposito completado"})
             }
+        
         
