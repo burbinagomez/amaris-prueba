@@ -1,5 +1,11 @@
 # Define el backend remoto de Terraform para almacenar el estado
 terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0" # Usa una versión >= 5.0
+    }
+  }
   backend "s3" {
     bucket         = "terraform-amaris"
     key            = "infra/terraform.tfstate"
