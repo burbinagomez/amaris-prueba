@@ -41,7 +41,7 @@ def lambda_handler(event, context):
                         "S": request_data.get("telefono")
                     },
                     "saldo": {
-                        "N": str(request_data.get("saldo"))
+                        "N": str(0)
                     }
                 },
                 ReturnValues= "NONE" 
@@ -77,21 +77,10 @@ def lambda_handler(event, context):
                 ":tipo": {"S": "APERTURA"}
             }
         )
-        transaction = transaction_scan["Items"][0] if transaction_scan["Items"] else None
+        transaction = transaction_scan["Items"][0] if transaction_scan["Items"] else {}
 
         if not transaction.get("Item"):
-            if user.get("Item", user.get("Attributes")).get("saldo")["N"] >= fondo.get("Item",{}).get("monto_minimo")["N"]:
-                transaction = dynamo.get_item(TableName="transactions",Key={
-                    "user": {
-                        "S": user.get("Item", user.get("Attributes")).get("cedula")["S"]
-                    },
-                    "tipo_transaccion": {
-                        "S": "APERTURA"
-                    },
-                    "fondo": {
-                        "S": fondo.get("Item",{}).get("nombre")["S"]
-                    },
-                })
+            if request_data.get("saldo") >= fondo.get("Item",{}).get("monto_minimo")["N"]:
                 transaction_id = str(uuid.uuid4())
                 transaction = dynamo.put_item(
                     TableName="transactions",
