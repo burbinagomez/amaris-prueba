@@ -206,7 +206,7 @@
                     const errorData = await response.json();
                     throw new Error(errorData.error || `Error en la petición: ${response.status}`);
                 }
-                return await response.json();
+                return await response;
             } catch (error) {
                 showMessage(errorMessage, error.message, 'error');
                 console.error('API Error:', error);

@@ -59,11 +59,12 @@ def lambda_handler(event, context):
         )
 
         if user.get("Item", user.get("Attributes")).get("saldo")["N"] >= fondo.get("Item",{}).get("monto_minimo")["N"]:
+            transaction_id = str(uuid.uuid4())
             transaction = dynamo.put_item(
                 TableName="transactions",
                 Item={
                     "id": {
-                        "S": str(uuid.uuid4())
+                        "S": transaction_id
                     },
                     "user": {
                         "S": user.get("Item", user.get("Attributes")).get("cedula")["S"]
@@ -82,7 +83,7 @@ def lambda_handler(event, context):
             )
 
             message = {
-                "transaction_id": transaction['id']['S'],
+                "transaction_id": transaction_id,
                 "user_cedula": user.get("Item", user.get("Attributes")).get("cedula")["S"],
                 "fondo_nombre": fondo.get("Item",{}).get("nombre")["S"]
             }
