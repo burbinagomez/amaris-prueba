@@ -125,8 +125,8 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
 # --- Lambda Functions ---
 
 resource "aws_lambda_function" "fondos" {
-  function_name    = "subscribe"
-  handler          = "subscribe.handler"
+  function_name    = "fondos"
+  handler          = "fondos.handler"
   runtime          = "python3.9"
   role             = aws_iam_role.lambda_amaris_iam_role.arn
   filename         = "fondos.zip"
