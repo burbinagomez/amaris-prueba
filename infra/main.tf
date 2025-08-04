@@ -294,6 +294,59 @@ resource "aws_api_gateway_stage" "dev" {
   stage_name    = "dev"
 }
 
+# --- S3 Static Website ---
+
+# Crea un nuevo bucket para el sitio web estático
+resource "aws_s3_bucket" "static_website" {
+  bucket = "amaris-static-website-12345" # Reemplaza con un nombre de bucket único
+}
+
+# Desactiva el bloqueo de acceso público para el bucket
+resource "aws_s3_bucket_public_access_block" "static_website_public_access_block" {
+  bucket = aws_s3_bucket.static_website.id
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+# Configura la política de bucket para permitir el acceso público
+resource "aws_s3_bucket_policy" "static_website_policy" {
+  bucket = aws_s3_bucket.static_website.id
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject",
+        Effect    = "Allow",
+        Principal = "*",
+        Action    = "s3:GetObject",
+        Resource  = "${aws_s3_bucket.static_website.arn}/*"
+      }
+    ]
+  })
+}
+
+# Habilita el hosting de sitio web estático
+resource "aws_s3_bucket_website_configuration" "static_website_configuration" {
+  bucket = aws_s3_bucket.static_website.id
+
+  index_document {
+    suffix = "index.html"
+  }
+
+}
+
+# Crea el archivo 'index.html'
+resource "aws_s3_object" "index_html" {
+  bucket       = aws_s3_bucket.static_website.id
+  key          = "index.html"
+  source       = "index.html"  # Debe existir un archivo 'index.html' en la raíz de tu proyecto
+  acl          = "public-read"
+  content_type = "text/html"
+}
+
+
 # --- Output del endpoint de la API ---
 # output "api_gateway_url" {
 #   description = "El URL del endpoint de la API Gateway."
