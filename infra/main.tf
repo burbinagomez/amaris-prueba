@@ -288,6 +288,12 @@ resource "aws_lambda_permission" "transactions_permission" {
   source_arn    = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/*"
 }
 
+resource "aws_api_gateway_stage" "dev" {
+  deployment_id = aws_api_gateway_deployment.api_deployment.id
+  rest_api_id   = aws_api_gateway_rest_api.api_gateway.id
+  stage_name    = "dev"
+}
+
 # --- Output del endpoint de la API ---
 # output "api_gateway_url" {
 #   description = "El URL del endpoint de la API Gateway."

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Fondos de Inversión</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Incluimos la fuente Inter -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+<body class="p-8">
+
+    <div class="container mx-auto p-6 bg-white shadow-lg rounded-xl">
+        <h1 class="text-4xl font-bold text-center text-indigo-600 mb-8">Plataforma de Fondos</h1>
+
+        <!-- Sección de carga y errores -->
+        <div id="loading" class="hidden text-center my-4 text-indigo-500 font-semibold">Cargando...</div>
+        <div id="error-message" class="hidden text-center my-4 text-red-500 font-semibold"></div>
+        <div id="success-message" class="hidden text-center my-4 text-green-500 font-semibold"></div>
+
+        <!-- Sección de Fondos (visible por defecto) -->
+        <div id="fondos-section" class="">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Fondos Disponibles</h2>
+            <div class="overflow-x-auto rounded-lg shadow-md">
+                <table id="fondos-table" class="min-w-full bg-white text-gray-700">
+                    <thead class="bg-indigo-600 text-white">
+                        <tr>
+                            <th class="py-3 px-6 text-left font-bold uppercase tracking-wider">Nombre</th>
+                            <th class="py-3 px-6 text-left font-bold uppercase tracking-wider">Categoría</th>
+                            <th class="py-3 px-6 text-left font-bold uppercase tracking-wider">Monto Mínimo</th>
+                            <th class="py-3 px-6 text-left font-bold uppercase tracking-wider">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <!-- Los datos de los fondos se insertarán aquí por JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sección de Transacciones (oculta por defecto) -->
+        <div id="transactions-section" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-semibold text-gray-800">Mis Transacciones</h2>
+                <button id="logout-button" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-red-600 transition-colors duration-200">
+                    Cerrar Sesión
+                </button>
+            </div>
+            
+            <!-- Resumen de Fondos del Usuario -->
+            <h3 class="text-xl font-semibold mt-8 mb-4 text-gray-800">Resumen de Inversiones</h3>
+            <div id="user-funds-summary" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <!-- Los fondos del usuario se insertarán aquí por JavaScript -->
+            </div>
+
+            <!-- Tabla de Transacciones -->
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">Historial de Transacciones</h3>
+            <div class="overflow-x-auto rounded-lg shadow-md">
+                <table id="transactions-table" class="min-w-full bg-white text-gray-700">
+                    <thead class="bg-indigo-600 text-white">
+                        <tr>
+                            <th class="py-3 px-6 text-left font-bold uppercase tracking-wider">ID Transacción</th>
+                            <th class="py-3 px-6 text-left font-bold uppercase tracking-wider">Fondo</th>
+                            <th class="py-3 px-6 text-left font-bold uppercase tracking-wider">Tipo</th>
+                            <th class="py-3 px-6 text-left font-bold uppercase tracking-wider">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <!-- Las transacciones se insertarán aquí por JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal para Suscripción (oculto por defecto) -->
+    <div id="subscribe-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden modal-overlay">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-indigo-600">Suscribirse al Fondo <span id="subscribe-fund-name" class="text-gray-800"></span></h3>
+                <button id="close-subscribe-modal" class="text-gray-400 hover:text-gray-600 text-3xl font-bold">&times;</button>
+            </div>
+            <form id="subscribe-form" class="space-y-4">
+                <input type="hidden" id="subscribe-fund-id">
+                <div>
+                    <label for="cedula" class="block text-gray-700 font-semibold mb-1">Cédula</label>
+                    <input type="text" id="cedula" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="correo" class="block text-gray-700 font-semibold mb-1">Correo Electrónico</label>
+                    <input type="email" id="correo" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="telefono" class="block text-gray-700 font-semibold mb-1">Teléfono</label>
+                    <input type="tel" id="telefono" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="saldo" class="block text-gray-700 font-semibold mb-1">Saldo Inicial</label>
+                    <input type="number" id="saldo" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-200">
+                    Confirmar Suscripción
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Depósito/Retiro (oculto por defecto) -->
+    <div id="transaction-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden modal-overlay">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-indigo-600"><span id="transaction-action-title"></span></h3>
+                <button id="close-transaction-modal" class="text-gray-400 hover:text-gray-600 text-3xl font-bold">&times;</button>
+            </div>
+            <form id="transaction-form" class="space-y-4">
+                <input type="hidden" id="transaction-fund-id">
+                <input type="hidden" id="transaction-type">
+                <div>
+                    <label for="transaction-cedula" class="block text-gray-700 font-semibold mb-1">Cédula</label>
+                    <input type="text" id="transaction-cedula" disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed">
+                </div>
+                <div>
+                    <label for="transaction-amount" class="block text-gray-700 font-semibold mb-1">Monto</label>
+                    <input type="number" id="transaction-amount" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-200">
+                    Confirmar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://04yyal5trd.execute-api.us-east-2.amazonaws.com';
+
+        // Elementos del DOM
+        const fondosSection = document.getElementById('fondos-section');
+        const transactionsSection = document.getElementById('transactions-section');
+        const fondosTableBody = document.querySelector('#fondos-table tbody');
+        const transactionsTableBody = document.querySelector('#transactions-table tbody');
+        const userFundsSummary = document.getElementById('user-funds-summary');
+        const subscribeModal = document.getElementById('subscribe-modal');
+        const transactionModal = document.getElementById('transaction-modal');
+        const subscribeForm = document.getElementById('subscribe-form');
+        const transactionForm = document.getElementById('transaction-form');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('error-message');
+        const successMessage = document.getElementById('success-message');
+        const logoutButton = document.getElementById('logout-button');
+
+        let currentUserCedula = null;
+
+        // Función para mostrar y ocultar mensajes
+        function showMessage(element, message, type) {
+            element.textContent = message;
+            element.className = `text-center my-4 font-semibold p-3 rounded-lg ${type === 'error' ? 'text-red-700 bg-red-100' : 'text-green-700 bg-green-100'}`;
+            element.classList.remove('hidden');
+        }
+
+        function hideMessage(element) {
+            element.classList.add('hidden');
+        }
+
+        // Función para manejar la visibilidad de las secciones
+        function showSection(sectionId) {
+            fondosSection.classList.add('hidden');
+            transactionsSection.classList.add('hidden');
+            if (sectionId === 'fondos') {
+                fondosSection.classList.remove('hidden');
+            } else if (sectionId === 'transactions') {
+                transactionsSection.classList.remove('hidden');
+            }
+        }
+
+        // Función para hacer peticiones a la API
+        async function apiCall(url, method = 'GET', data = null) {
+            loading.classList.remove('hidden');
+            hideMessage(errorMessage);
+            hideMessage(successMessage);
+
+            const options = {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+            };
+
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Error en la petición: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                showMessage(errorMessage, error.message, 'error');
+                console.error('API Error:', error);
+                throw error; // Propagar el error para que el llamador lo maneje
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        // 1. Cargar y mostrar la lista de fondos
+        async function fetchFondos() {
+            try {
+                const fondos = await apiCall(`${API_BASE_URL}/fondos`);
+                renderFondosTable(fondos);
+            } catch (error) {
+                // El mensaje de error ya se muestra en apiCall
+            }
+        }
+
+        function renderFondosTable(fondos) {
+            fondosTableBody.innerHTML = '';
+            fondos.forEach(fondo => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="py-4 px-6">${fondo.nombre}</td>
+                    <td class="py-4 px-6">${fondo.categoria}</td>
+                    <td class="py-4 px-6">$${fondo.monto_minimo}</td>
+                    <td class="py-4 px-6">
+                        <button class="subscribe-button bg-green-500 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-green-600 transition-colors duration-200"
+                                data-id="${fondo.id}" data-name="${fondo.nombre}">Suscribir</button>
+                    </td>
+                `;
+                fondosTableBody.appendChild(row);
+            });
+            document.querySelectorAll('.subscribe-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    document.getElementById('subscribe-fund-id').value = button.dataset.id;
+                    document.getElementById('subscribe-fund-name').textContent = button.dataset.name;
+                    subscribeModal.classList.remove('hidden');
+                });
+            });
+        }
+
+        // 2. Manejar la suscripción a un fondo
+        subscribeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const cedula = document.getElementById('cedula').value;
+            const correo = document.getElementById('correo').value;
+            const telefono = document.getElementById('telefono').value;
+            const saldo = document.getElementById('saldo').value;
+            const fondoId = document.getElementById('subscribe-fund-id').value;
+
+            const subscriptionData = {
+                cedula,
+                correo,
+                telefono,
+                saldo: parseFloat(saldo)
+            };
+
+            try {
+                await apiCall(`${API_BASE_URL}/subscribe`, 'POST', subscriptionData);
+                showMessage(successMessage, 'Suscripción exitosa. Redireccionando a tus transacciones...', 'success');
+                currentUserCedula = cedula; // Guardar la cédula para futuras peticiones
+                localStorage.setItem('userCedula', cedula);
+                subscribeModal.classList.add('hidden');
+                showTransactionsView();
+            } catch (error) {
+                // El mensaje de error ya se muestra en apiCall
+            }
+        });
+
+        // 3. Cargar y mostrar las transacciones y fondos del usuario
+        async function showTransactionsView() {
+            if (!currentUserCedula) {
+                showMessage(errorMessage, 'Debes suscribirte primero para ver las transacciones.', 'error');
+                showSection('fondos');
+                return;
+            }
+            showSection('transactions');
+            try {
+                const transactions = await apiCall(`${API_BASE_URL}/transactions?user=${currentUserCedula}`);
+                renderTransactionsTable(transactions);
+                renderUserFundsSummary(transactions);
+            } catch (error) {
+                // El mensaje de error ya se muestra en apiCall
+            }
+        }
+
+        function renderTransactionsTable(transactions) {
+            transactionsTableBody.innerHTML = '';
+            transactions.forEach(tx => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="py-4 px-6">${tx.id}</td>
+                    <td class="py-4 px-6">${tx.fondo}</td>
+                    <td class="py-4 px-6">${tx.tipo_transaccion}</td>
+                    <td class="py-4 px-6">$${tx.monto}</td>
+                `;
+                transactionsTableBody.appendChild(row);
+            });
+        }
+
+        function renderUserFundsSummary(transactions) {
+            userFundsSummary.innerHTML = '';
+            const fundBalances = transactions.reduce((acc, tx) => {
+                if (!acc[tx.fondo]) {
+                    acc[tx.fondo] = 0;
+                }
+                if (tx.tipo_transaccion === 'deposito') {
+                    acc[tx.fondo] += tx.monto;
+                } else if (tx.tipo_transaccion === 'cancelacion') {
+                    acc[tx.fondo] -= tx.monto;
+                }
+                return acc;
+            }, {});
+
+            for (const [fundName, balance] of Object.entries(fundBalances)) {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-6 rounded-xl shadow-md border border-gray-200';
+                card.innerHTML = `
+                    <h4 class="text-lg font-bold text-indigo-600 mb-2">${fundName}</h4>
+                    <p class="text-2xl font-bold text-gray-800">$${balance.toFixed(2)}</p>
+                    <div class="flex gap-2 mt-4">
+                        <button class="transaction-button bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors duration-200"
+                                data-fund-name="${fundName}" data-operation="deposito">Depositar</button>
+                        <button class="transaction-button bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors duration-200"
+                                data-fund-name="${fundName}" data-operation="cancelacion">Retirar</button>
+                    </div>
+                `;
+                userFundsSummary.appendChild(card);
+            }
+
+            document.querySelectorAll('.transaction-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    const operation = button.dataset.operation;
+                    const fundName = button.dataset.fundName;
+                    
+                    document.getElementById('transaction-action-title').textContent = `${operation === 'deposito' ? 'Realizar Depósito' : 'Realizar Retiro'} en ${fundName}`;
+                    document.getElementById('transaction-fund-id').value = fundName;
+                    document.getElementById('transaction-type').value = operation;
+                    document.getElementById('transaction-cedula').value = currentUserCedula;
+                    transactionModal.classList.remove('hidden');
+                });
+            });
+        }
+
+        // 4. Manejar el depósito o retiro de un fondo
+        transactionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const cedula = document.getElementById('transaction-cedula').value;
+            const fondo = document.getElementById('transaction-fund-id').value;
+            const operacion = document.getElementById('transaction-type').value;
+            const monto = document.getElementById('transaction-amount').value;
+            
+            const transactionData = {
+                cedula,
+                operacion,
+                monto: parseFloat(monto),
+                fondo // Se espera que la API maneje el nombre del fondo
+            };
+
+            try {
+                await apiCall(`${API_BASE_URL}/transactions`, 'POST', transactionData);
+                showMessage(successMessage, 'Transacción realizada con éxito.', 'success');
+                transactionModal.classList.add('hidden');
+                document.getElementById('transaction-amount').value = '';
+                showTransactionsView(); // Recargar los datos para ver la nueva transacción
+            } catch (error) {
+                // El mensaje de error ya se muestra en apiCall
+            }
+        });
+
+        // Manejar el cierre de los modales
+        document.getElementById('close-subscribe-modal').addEventListener('click', () => {
+            subscribeModal.classList.add('hidden');
+        });
+        document.getElementById('close-transaction-modal').addEventListener('click', () => {
+            transactionModal.classList.add('hidden');
+        });
+
+        // Manejar el cierre de sesión
+        logoutButton.addEventListener('click', () => {
+            currentUserCedula = null;
+            localStorage.removeItem('userCedula');
+            showSection('fondos');
+            fetchFondos();
+            showMessage(successMessage, 'Has cerrado sesión correctamente.', 'success');
+        });
+
+        // Inicializar la aplicación al cargar la página
+        document.addEventListener('DOMContentLoaded', () => {
+            currentUserCedula = localStorage.getItem('userCedula');
+            if (currentUserCedula) {
+                showTransactionsView();
+            } else {
+                fetchFondos();
+            }
+        });
+    </script>
+
+</body>
+</html>
