@@ -282,7 +282,7 @@ resource "aws_lambda_permission" "fondos_permission" {
   principal     = "apigateway.amazonaws.com"
   
   # CORRECCIÓN: Se ajusta el source_arn para incluir los comodines para todos los métodos y recursos
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*/*"
+  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*"
   
   depends_on = [aws_api_gateway_stage.dev]
 }
@@ -294,7 +294,7 @@ resource "aws_lambda_permission" "subscribe_permission" {
   principal     = "apigateway.amazonaws.com"
   
   # CORRECCIÓN: Se ajusta el source_arn para incluir los comodines para todos los métodos y recursos
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*/*"
+  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*"
   
   depends_on = [aws_api_gateway_stage.dev]
 }
@@ -306,7 +306,7 @@ resource "aws_lambda_permission" "transactions_permission" {
   principal     = "apigateway.amazonaws.com"
   
   # CORRECCIÓN: Se ajusta el source_arn para incluir los comodines para todos los métodos y recursos
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*/*"
+  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*"
   
   depends_on = [aws_api_gateway_stage.dev]
 }
