@@ -158,6 +158,14 @@ resource "aws_lambda_function" "transactions" {
 resource "aws_apigatewayv2_api" "api_gateway" {
   name          = "amaris-http-api"
   protocol_type = "HTTP"
+
+  # CORRECCIÓN: Habilitar la política CORS
+  cors_configuration {
+    allow_origins = ["http://${aws_s3_bucket_website_configuration.static_website_configuration.website_endpoint}"]
+    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_headers = ["content-type", "x-amz-date", "authorization", "x-api-key"]
+    allow_credentials = true
+  }
 }
 
 # Integración para la Lambda 'fondos'
@@ -231,22 +239,16 @@ resource "aws_apigatewayv2_deployment" "api_deployment" {
 resource "aws_apigatewayv2_stage" "dev" {
   api_id        = aws_apigatewayv2_api.api_gateway.id
   name          = "dev"
-  auto_deploy   = true # Despliega automáticamente los cambios en las rutas e integraciones
-  
-  # Si se usa `auto_deploy`, el `deployment_id` es opcional,
-  # pero si se requiere un despliegue manual, se puede usar
-  # deployment_id = aws_apigatewayv2_deployment.api_deployment.id
+  auto_deploy   = true 
 }
 
 # --- Permisos para que API Gateway invoque a las Lambdas (CORREGIDO) ---
-# El ARN para API Gateway v2 es diferente
 resource "aws_lambda_permission" "fondos_permission" {
   statement_id  = "AllowExecutionFromAPIGatewayV2-fondos"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.fondos.function_name
   principal     = "apigateway.amazonaws.com"
   
-  # CORRECCIÓN: Se ajusta el source_arn para el formato de API Gateway v2
   source_arn = "${aws_apigatewayv2_api.api_gateway.execution_arn}/*"
 }
 
@@ -256,7 +258,6 @@ resource "aws_lambda_permission" "subscribe_permission" {
   function_name = aws_lambda_function.subscribe.function_name
   principal     = "apigateway.amazonaws.com"
   
-  # CORRECCIÓN: Se ajusta el source_arn para el formato de API Gateway v2
   source_arn = "${aws_apigatewayv2_api.api_gateway.execution_arn}/*"
 }
 
@@ -266,7 +267,6 @@ resource "aws_lambda_permission" "transactions_permission" {
   function_name = aws_lambda_function.transactions.function_name
   principal     = "apigateway.amazonaws.com"
   
-  # CORRECCIÓN: Se ajusta el source_arn para el formato de API Gateway v2
   source_arn = "${aws_apigatewayv2_api.api_gateway.execution_arn}/*"
 }
 

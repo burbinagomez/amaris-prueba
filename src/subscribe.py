@@ -3,6 +3,7 @@ import json
 import uuid
 
 dynamo = boto3.client('dynamodb')
+# sns = boto3.client('sns')
 required_fields = {"cedula", "correo"}
 
 def lambda_handler(event, context):
