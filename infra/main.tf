@@ -1,3 +1,4 @@
+# Define el backend remoto de Terraform para almacenar el estado
 terraform {
   backend "s3" {
     bucket         = "terraform-amaris"
@@ -131,7 +132,6 @@ resource "aws_lambda_function" "fondos" {
   role             = aws_iam_role.lambda_amaris_iam_role.arn
   filename         = "fondos.zip"
   source_code_hash = filebase64sha256("fondos.zip")
-
 }
 
 resource "aws_lambda_function" "subscribe" {
@@ -141,7 +141,6 @@ resource "aws_lambda_function" "subscribe" {
   role             = aws_iam_role.lambda_amaris_iam_role.arn
   filename         = "subscribe.zip"
   source_code_hash = filebase64sha256("subscribe.zip")
-
 }
 
 resource "aws_lambda_function" "transactions" {
@@ -151,7 +150,6 @@ resource "aws_lambda_function" "transactions" {
   role             = aws_iam_role.lambda_amaris_iam_role.arn
   filename         = "transactions.zip"
   source_code_hash = filebase64sha256("transactions.zip")
-
 }
 
 # --- API Gateway v1 (REST API) ---
@@ -182,14 +180,12 @@ resource "aws_api_gateway_integration" "fondos_integration" {
   uri                     = aws_lambda_function.fondos.invoke_arn
 }
 
-# Recurso para el path "/subscribe"
 resource "aws_api_gateway_resource" "subscribe_resource" {
   rest_api_id = aws_api_gateway_rest_api.api_gateway.id
   parent_id   = aws_api_gateway_rest_api.api_gateway.root_resource_id
   path_part   = "subscribe"
 }
 
-# Método POST para el path "/subscribe"
 resource "aws_api_gateway_method" "subscribe_post_method" {
   rest_api_id   = aws_api_gateway_rest_api.api_gateway.id
   resource_id   = aws_api_gateway_resource.subscribe_resource.id
@@ -197,7 +193,6 @@ resource "aws_api_gateway_method" "subscribe_post_method" {
   authorization = "NONE"
 }
 
-# Integración del método POST "/subscribe" con la Lambda 'subscribe'
 resource "aws_api_gateway_integration" "subscribe_integration" {
   rest_api_id             = aws_api_gateway_rest_api.api_gateway.id
   resource_id             = aws_api_gateway_resource.subscribe_resource.id
@@ -207,14 +202,12 @@ resource "aws_api_gateway_integration" "subscribe_integration" {
   uri                     = aws_lambda_function.subscribe.invoke_arn
 }
 
-# Recurso para el path "/transactions"
 resource "aws_api_gateway_resource" "transactions_resource" {
   rest_api_id = aws_api_gateway_rest_api.api_gateway.id
   parent_id   = aws_api_gateway_rest_api.api_gateway.root_resource_id
   path_part   = "transactions"
 }
 
-# Método GET para el path "/transactions"
 resource "aws_api_gateway_method" "transactions_get_method" {
   rest_api_id   = aws_api_gateway_rest_api.api_gateway.id
   resource_id   = aws_api_gateway_resource.transactions_resource.id
@@ -222,7 +215,6 @@ resource "aws_api_gateway_method" "transactions_get_method" {
   authorization = "NONE"
 }
 
-# Integración del método GET "/transactions" con la Lambda 'transactions'
 resource "aws_api_gateway_integration" "transactions_get_integration" {
   rest_api_id             = aws_api_gateway_rest_api.api_gateway.id
   resource_id             = aws_api_gateway_resource.transactions_resource.id
@@ -232,7 +224,6 @@ resource "aws_api_gateway_integration" "transactions_get_integration" {
   uri                     = aws_lambda_function.transactions.invoke_arn
 }
 
-# Método POST para el path "/transactions"
 resource "aws_api_gateway_method" "transactions_post_method" {
   rest_api_id   = aws_api_gateway_rest_api.api_gateway.id
   resource_id   = aws_api_gateway_resource.transactions_resource.id
@@ -240,7 +231,6 @@ resource "aws_api_gateway_method" "transactions_post_method" {
   authorization = "NONE"
 }
 
-# Integración del método POST "/transactions" con la Lambda 'transactions'
 resource "aws_api_gateway_integration" "transactions_post_integration" {
   rest_api_id             = aws_api_gateway_rest_api.api_gateway.id
   resource_id             = aws_api_gateway_resource.transactions_resource.id
@@ -250,11 +240,27 @@ resource "aws_api_gateway_integration" "transactions_post_integration" {
   uri                     = aws_lambda_function.transactions.invoke_arn
 }
 
-# Despliegue de la API
 resource "aws_api_gateway_deployment" "api_deployment" {
   rest_api_id = aws_api_gateway_rest_api.api_gateway.id
 
-  # Depende de todas las integraciones para asegurar que el despliegue es completo
+  # Este bloque 'triggers' asegura que un nuevo despliegue se cree
+  # cada vez que el hash de la API cambie, reflejando nuevas configuraciones
+  triggers = {
+    redeployment = sha1(jsonencode([
+      aws_api_gateway_resource.fondos_resource.id,
+      aws_api_gateway_method.fondos_get_method.id,
+      aws_api_gateway_resource.subscribe_resource.id,
+      aws_api_gateway_method.subscribe_post_method.id,
+      aws_api_gateway_resource.transactions_resource.id,
+      aws_api_gateway_method.transactions_get_method.id,
+      aws_api_gateway_method.transactions_post_method.id,
+      aws_api_gateway_integration.fondos_integration.id,
+      aws_api_gateway_integration.subscribe_integration.id,
+      aws_api_gateway_integration.transactions_get_integration.id,
+      aws_api_gateway_integration.transactions_post_integration.id,
+    ]))
+  }
+
   depends_on = [
     aws_api_gateway_integration.fondos_integration,
     aws_api_gateway_integration.subscribe_integration,
@@ -263,21 +269,38 @@ resource "aws_api_gateway_deployment" "api_deployment" {
   ]
 }
 
+resource "aws_api_gateway_stage" "dev" {
+  deployment_id = aws_api_gateway_deployment.api_deployment.id
+  rest_api_id   = aws_api_gateway_rest_api.api_gateway.id
+  stage_name    = "dev"
+}
+
+# --- Permisos para que API Gateway invoque a las Lambdas (CORREGIDO) ---
+
 resource "aws_lambda_permission" "fondos_permission" {
   statement_id  = "AllowExecutionFromAPIGateway-fondos"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.fondos.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/*"
+  
+  # CORRECCIÓN: Se ajusta el source_arn para incluir el nombre del stage
+  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*"
+  
+  # CORRECCIÓN: Se agrega una dependencia explícita al stage para evitar errores de temporización
+  depends_on = [aws_api_gateway_stage.dev]
 }
 
-# Permisos para que API Gateway invoque a las Lambdas
 resource "aws_lambda_permission" "subscribe_permission" {
   statement_id  = "AllowExecutionFromAPIGateway-subscribe"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.subscribe.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/*"
+  
+  # CORRECCIÓN: Se ajusta el source_arn para incluir el nombre del stage
+  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*"
+  
+  # CORRECCIÓN: Se agrega una dependencia explícita al stage para evitar errores de temporización
+  depends_on = [aws_api_gateway_stage.dev]
 }
 
 resource "aws_lambda_permission" "transactions_permission" {
@@ -285,23 +308,20 @@ resource "aws_lambda_permission" "transactions_permission" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.transactions.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/*"
-}
-
-resource "aws_api_gateway_stage" "dev" {
-  deployment_id = aws_api_gateway_deployment.api_deployment.id
-  rest_api_id   = aws_api_gateway_rest_api.api_gateway.id
-  stage_name    = "dev"
+  
+  # CORRECCIÓN: Se ajusta el source_arn para incluir el nombre del stage
+  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*"
+  
+  # CORRECCIÓN: Se agrega una dependencia explícita al stage para evitar errores de temporización
+  depends_on = [aws_api_gateway_stage.dev]
 }
 
 # --- S3 Static Website ---
 
-# Crea un nuevo bucket para el sitio web estático
 resource "aws_s3_bucket" "static_website" {
-  bucket = "amaris-static-website-12345" # Reemplaza con un nombre de bucket único
+  bucket = "amaris-static-website-12345"
 }
 
-# Desactiva el bloqueo de acceso público para el bucket
 resource "aws_s3_bucket_public_access_block" "static_website_public_access_block" {
   bucket = aws_s3_bucket.static_website.id
   block_public_acls       = false
@@ -310,7 +330,6 @@ resource "aws_s3_bucket_public_access_block" "static_website_public_access_block
   restrict_public_buckets = false
 }
 
-# Configura la política de bucket para permitir el acceso público
 resource "aws_s3_bucket_policy" "static_website_policy" {
   bucket = aws_s3_bucket.static_website.id
   policy = jsonencode({
@@ -327,28 +346,29 @@ resource "aws_s3_bucket_policy" "static_website_policy" {
   })
 }
 
-# Habilita el hosting de sitio web estático
 resource "aws_s3_bucket_website_configuration" "static_website_configuration" {
   bucket = aws_s3_bucket.static_website.id
-
   index_document {
     suffix = "index.html"
   }
-
 }
 
-# Crea el archivo 'index.html'
 resource "aws_s3_object" "index_html" {
   bucket       = aws_s3_bucket.static_website.id
   key          = "index.html"
-  source       = "index.html"  # Debe existir un archivo 'index.html' en la raíz de tu proyecto
+  source       = "index.html"
   acl          = "public-read"
   content_type = "text/html"
 }
 
+# --- Outputs ---
 
-# --- Output del endpoint de la API ---
-# output "api_gateway_url" {
-#   description = "El URL del endpoint de la API Gateway."
-#   value       = aws_api_gateway_deployment.api_deployment.triggers
-# }
+output "api_gateway_url" {
+  description = "El URL del endpoint de la API Gateway."
+  value       = aws_api_gateway_stage.dev.invoke_url
+}
+
+output "static_website_url" {
+  description = "El URL del endpoint del sitio web estático en S3."
+  value       = aws_s3_bucket_website_configuration.static_website_configuration.website_endpoint
+}
