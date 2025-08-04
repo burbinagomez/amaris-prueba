@@ -54,7 +54,8 @@ def lambda_handler(event, context):
             # Buscar transacciones del usuario
             resp = dynamo.scan(
                 TableName="transactions",
-                FilterExpression="user = :user",
+                FilterExpression="#u = :user",
+                ExpressionAttributeNames={"#u": "user"},
                 ExpressionAttributeValues={":user": {"S": user}}
             )
             items = resp.get("Items", [])
