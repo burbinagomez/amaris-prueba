@@ -1,0 +1,65 @@
+name: 'Terraform AWS Pipeline'
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    env:
+      TF_VAR_aws_region: ${{ env.AWS_REGION }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.x
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Create Lambda ZIP packages
+        run: |
+          # Create zip for 'subscribe' Lambda
+          cd src
+          zip ../infra/subscribe.zip subscribe.py
+          cd ..
+          
+          # Create zip for 'transactions' Lambda
+          cd src
+          zip ../infra/transactions.zip transactions.py
+          cd ..
+          
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        working-directory: ./infra
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+        working-directory: ./infra
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color
+        working-directory: ./infra
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve
+        working-directory: ./infra
