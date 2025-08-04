@@ -58,17 +58,18 @@ def lambda_handler(event, context):
             }
         )
 
-        transaction = dynamo.get_item(TableName="transactions",Key={
-                "user": {
-                    "S": user.get("Item", user.get("Attributes")).get("cedula")["S"]
-                },
-                "tipo_transaccion": {
-                    "S": "APERTURA"
-                },
-                "fondo": {
-                    "S": fondo.get("Item",{}).get("nombre")["S"]
-                },
-            })
+        # Buscar si ya existe una apertura para este usuario y fondo usando scan
+        transaction_scan = dynamo.scan(
+            TableName="transactions",
+            FilterExpression="#u = :user AND #f = :fondo AND #t = :tipo",
+            ExpressionAttributeNames={"#u": "user", "#f": "fondo", "#t": "tipo_transaccion"},
+            ExpressionAttributeValues={
+                ":user": {"S": user.get("Item", user.get("Attributes")).get("cedula")["S"]},
+                ":fondo": {"S": fondo.get("Item",{}).get("nombre")["S"]},
+                ":tipo": {"S": "APERTURA"}
+            }
+        )
+        transaction = transaction_scan["Items"][0] if transaction_scan["Items"] else None
 
         if not transaction.get("Item"):
             if user.get("Item", user.get("Attributes")).get("saldo")["N"] >= fondo.get("Item",{}).get("monto_minimo")["N"]:
