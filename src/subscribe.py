@@ -59,45 +59,83 @@ def lambda_handler(event, context):
         )
 
         if user.get("Item", user.get("Attributes")).get("saldo")["N"] >= fondo.get("Item",{}).get("monto_minimo")["N"]:
-            transaction_id = str(uuid.uuid4())
-            transaction = dynamo.put_item(
-                TableName="transactions",
-                Item={
-                    "id": {
-                        "S": transaction_id
-                    },
-                    "user": {
-                        "S": user.get("Item", user.get("Attributes")).get("cedula")["S"]
-                    },
-                    "fondo": {
-                        "S": fondo.get("Item",{}).get("nombre")["S"]
-                    },
-                    "tipo_transaccion": {
-                        "S": "APERTURA"
-                    },
-                    "monto": {
-                        "N": str(request_data.get("saldo"))
-                    }
+            transaction = dynamo.get_item(TableName="transactions",Key={
+                "user": {
+                    "S": user.get("Item", user.get("Attributes")).get("cedula")["S"]
                 },
-                ReturnValues= "ALL_OLD" 
-            )
+                "tipo_transaccion": {
+                    "S": "APERTURA"
+                },
+                "fondo": {
+                    "S": fondo.get("Item",{}).get("nombre")["S"]
+                },
+            })
+            if not transaction.get("Item"):
+                transaction_id = str(uuid.uuid4())
+                transaction = dynamo.put_item(
+                    TableName="transactions",
+                    Item={
+                        "id": {
+                            "S": transaction_id
+                        },
+                        "user": {
+                            "S": user.get("Item", user.get("Attributes")).get("cedula")["S"]
+                        },
+                        "fondo": {
+                            "S": fondo.get("Item",{}).get("nombre")["S"]
+                        },
+                        "tipo_transaccion": {
+                            "S": "APERTURA"
+                        },
+                        "monto": {
+                            "N": str(request_data.get("saldo"))
+                        }
+                    },
+                    ReturnValues= "ALL_OLD" 
+                )
 
-            message = {
-                "transaction_id": transaction_id,
-                "user_cedula": user.get("Item", user.get("Attributes")).get("cedula")["S"],
-                "fondo_nombre": fondo.get("Item",{}).get("nombre")["S"]
-            }
-            
-            sns.publish(
-                TopicArn=SNS_TOPIC_ARN,
-                Message=json.dumps({'default': json.dumps(message)}),
-                MessageStructure='json'
-            )
+                message = {
+                    "transaction_id": transaction_id,
+                    "user_cedula": user.get("Item", user.get("Attributes")).get("cedula")["S"],
+                    "fondo_nombre": fondo.get("Item",{}).get("nombre")["S"]
+                }
 
-            return {
-                'statusCode': 200,
-                'body': json.dumps({"message":"Apertura creada correctamente, mas informacion sera enviada a su correo"})
-            }
+                sns.publish(
+                    TopicArn=SNS_TOPIC_ARN,
+                    Message=json.dumps({'default': json.dumps(message)}),
+                    MessageStructure='json'
+                )
+
+                return {
+                    'statusCode': 200,
+                    'body': json.dumps({"message":"Apertura creada correctamente, mas informacion sera enviada a su correo"})
+                }
+            else:
+                transaction = dynamo.put_item(
+                    TableName="transactions",
+                    Item={
+                        "id": {
+                            "S": transaction_id
+                        },
+                        "user": {
+                            "S": user.get("Item", user.get("Attributes")).get("cedula")["S"]
+                        },
+                        "fondo": {
+                            "S": fondo.get("Item",{}).get("nombre")["S"]
+                        },
+                        "tipo_transaccion": {
+                            "S": "deposito"
+                        },
+                        "monto": {
+                            "N": str(transaction.get("Item",{}).get("monto")["N"] + request_data.get("saldo"))
+                        }
+                    },
+                    ReturnValues= "ALL_OLD" 
+                )
+                return {
+                    'statusCode': 200,
+                    'body': json.dumps({"message":"Deposito completado"})
+                }
         else:
             return {
                 'statusCode': 200,
