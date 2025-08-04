@@ -19,7 +19,7 @@ def lambda_handler(event, context):
             }
         )
         fondo = dynamo.get_item(
-            TableName="fondo",
+            TableName="fondos",
             Key={
                 "nombre": {
                     "S": request_data.get("fondo",{}).get("nombre")

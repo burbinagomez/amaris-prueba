@@ -44,7 +44,7 @@ def lambda_handler(event, context):
                 ReturnValues= "ALL_OLD" 
             )
         fondo = dynamo.get_item(
-            TableName="fondo",
+            TableName="fondos",
             Key={
                 "nombre": {
                     "S": request_data.get("fondo",{}).get("nombre")
