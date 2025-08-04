@@ -39,6 +39,10 @@ jobs:
           cd src
           zip ../infra/transactions.zip transactions.py
           cd ..
+
+          cd src
+          zip ../infra/fondos.zip fondos.py
+          cd ..
           
       - name: Terraform Init
         id: init

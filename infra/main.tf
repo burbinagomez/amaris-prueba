@@ -124,6 +124,16 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
 
 # --- Lambda Functions ---
 
+resource "aws_lambda_function" "fondos" {
+  function_name    = "subscribe"
+  handler          = "subscribe.handler"
+  runtime          = "python3.9"
+  role             = aws_iam_role.lambda_amaris_iam_role.arn
+  filename         = "fondos.zip"
+  source_code_hash = filebase64sha256("fondos.zip")
+
+}
+
 resource "aws_lambda_function" "subscribe" {
   function_name    = "subscribe"
   handler          = "subscribe.handler"
@@ -132,11 +142,6 @@ resource "aws_lambda_function" "subscribe" {
   filename         = "subscribe.zip"
   source_code_hash = filebase64sha256("subscribe.zip")
 
-  environment {
-    variables = {
-      DYNAMO_TABLE_USERS = aws_dynamodb_table.users.name
-    }
-  }
 }
 
 resource "aws_lambda_function" "transactions" {
@@ -147,17 +152,34 @@ resource "aws_lambda_function" "transactions" {
   filename         = "transactions.zip"
   source_code_hash = filebase64sha256("transactions.zip")
 
-  environment {
-    variables = {
-      DYNAMO_TABLE_TRANSACTIONS = aws_dynamodb_table.transactions.name
-    }
-  }
 }
 
 # --- API Gateway v1 (REST API) ---
 
 resource "aws_api_gateway_rest_api" "api_gateway" {
   name = "amaris-api"
+}
+
+resource "aws_api_gateway_resource" "fondos_resource" {
+  rest_api_id = aws_api_gateway_rest_api.api_gateway.id
+  parent_id   = aws_api_gateway_rest_api.api_gateway.root_resource_id
+  path_part   = "fondos"
+}
+
+resource "aws_api_gateway_method" "fondos_get_method" {
+  rest_api_id   = aws_api_gateway_rest_api.api_gateway.id
+  resource_id   = aws_api_gateway_resource.fondos_resource.id
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "fondos_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.api_gateway.id
+  resource_id             = aws_api_gateway_resource.fondos_resource.id
+  http_method             = aws_api_gateway_method.fondos_get_method.http_method
+  type                    = "AWS_PROXY"
+  integration_http_method = "GET"
+  uri                     = aws_lambda_function.fondos.invoke_arn
 }
 
 # Recurso para el path "/subscribe"
@@ -234,10 +256,19 @@ resource "aws_api_gateway_deployment" "api_deployment" {
 
   # Depende de todas las integraciones para asegurar que el despliegue es completo
   depends_on = [
+    aws_api_gateway_integration.fondos_integration,
     aws_api_gateway_integration.subscribe_integration,
     aws_api_gateway_integration.transactions_get_integration,
     aws_api_gateway_integration.transactions_post_integration,
   ]
+}
+
+resource "aws_lambda_permission" "fondos_permission" {
+  statement_id  = "AllowExecutionFromAPIGateway-fondos"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.fondos
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/*"
 }
 
 # Permisos para que API Gateway invoque a las Lambdas
