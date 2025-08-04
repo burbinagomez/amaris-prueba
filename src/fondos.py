@@ -12,6 +12,14 @@ def lambda_handler(event, context):
 
         # Extrae los elementos de la respuesta
         items = response.get('Items', [])
+        if len(items) > 0:
+            new_items = []
+            for item in items:
+                new_item = {}
+                for key,value in item.items():
+                    new_item[key] = value.get("S",value.get("N"))
+                new_items.append(new_item)
+            items = new_items
 
         # Devuelve los datos en formato JSON
         return {

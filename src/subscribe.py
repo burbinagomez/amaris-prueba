@@ -14,7 +14,7 @@ def lambda_handler(event, context):
         if required_fields.intersection(request_data_keys) != required_fields:
             return {"statusCode": 400, "message" : f"Faltan los siguientes atributos {required_fields.intersection(request_data_keys)}" }
         user = dynamo.get_item(
-            TableName="user",
+            TableName="users",
             Key={
                 "cedula": {
                     "S": request_data.get("cedula")
@@ -26,7 +26,7 @@ def lambda_handler(event, context):
         )
         if not user:
             user = dynamo.put_item(
-                TableName="user",
+                TableName="users",
                 Item={
                     "cedula": {
                         "S": request_data.get("cedula")

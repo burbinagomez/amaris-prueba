@@ -8,7 +8,7 @@ def lambda_handler(event, context):
     if event.get("httpMethod") == "POST":
         request_data = json.loads(event.get("body"))
         user = dynamo.get_item(
-            TableName="user",
+            TableName="users",
             Key={
                 "cedula": {
                     "S": request_data.get("cedula")
@@ -67,7 +67,7 @@ def lambda_handler(event, context):
 
             if request_data.get("operacion") == "cancelar":
                 user = dynamo.put_item(
-                    TableName="user",
+                    TableName="users",
                     Item={
                         "cedula": {
                             "S": request_data.get("cedula")
