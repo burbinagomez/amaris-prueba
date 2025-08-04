@@ -4,80 +4,69 @@ import uuid
 
 dynamo = boto3.client('dynamodb')
 
-def lambda_handler(event, context):
-    if event.get("httpMethod") == "POST":
-        request_data = json.loads(event.get("body"))
-        user = dynamo.get_item(
-            TableName="users",
-            Key={
-                "cedula": {
-                    "S": request_data.get("cedula")
-                },
-                "correo": {
-                    "S": request_data.get("correo")
-                }
-            }
-        )
-        fondo = dynamo.get_item(
-            TableName="fondos",
-            Key={
-                "nombre": {
-                    "S": request_data.get("fondo",{}).get("nombre")
-                },
-                "categoria": {
-                    "S": request_data.get("fondo",{}).get("categoria")
-                }
-            }
-        )
 
-        if request_data.get("operacion"):
-            last_transaction = dynamo.get_item(
-                TableName="transactions",
-                Key={
-                    "user": {
-                        "S": user.get("Item", user.get("Attributes")).get("cedula")["S"]
-                    },
-                    "fondo": {
-                        "S": fondo.get("Item",{}).get("nombre")["S"]
-                    }
-                }
+def lambda_handler(event, context):
+    http_method = event.get("httpMethod", "GET")
+    if http_method == "POST":
+        # Espera: { cedula, fondo, operacion, monto }
+        try:
+            request_data = json.loads(event.get("body", "{}"))
+            cedula = request_data.get("cedula")
+            fondo = request_data.get("fondo")
+            operacion = request_data.get("operacion")
+            monto = float(request_data.get("monto", 0))
+            if not (cedula and fondo and operacion and monto):
+                return {"statusCode": 400, "body": json.dumps({"message": "Missing required fields"})}
+
+            # Buscar usuario
+            user_resp = dynamo.scan(
+                TableName="users",
+                FilterExpression="cedula = :cedula",
+                ExpressionAttributeValues={":cedula": {"S": cedula}}
             )
-            monto = float(last_transaction.get("Item").get("monto")) + float(request_data.get("monto",0))
-            transaction = dynamo.put_item(
+            if not user_resp.get("Items"):
+                return {"statusCode": 404, "body": json.dumps({"message": "User not found"})}
+
+            # Registrar transacción
+            transaction_id = str(uuid.uuid4())
+            dynamo.put_item(
                 TableName="transactions",
                 Item={
-                    "id": {
-                        "S": str(uuid.uuid4())
-                    },
-                    "user": {
-                        "S": user.get("Item", user.get("Attributes")).get("cedula")["S"]
-                    },
-                    "fondo": {
-                        "S": fondo.get("Item",{}).get("nombre")["S"]
-                    },
-                    "tipo_transaccion": {
-                        "S": request_data.get("operacion")
-                    },
-                    "monto": {
-                        "N": monto if request_data.get("operacion") == "deposito" else 0
-                    }
-                },
-                ReturnValues= "ALL_OLD" 
+                    "id": {"S": transaction_id},
+                    "user": {"S": cedula},
+                    "fondo": {"S": fondo},
+                    "tipo_transaccion": {"S": operacion},
+                    "monto": {"N": str(monto)}
+                }
             )
+            return {"statusCode": 200, "body": json.dumps({"message": "Transaction successful"})}
+        except Exception as e:
+            return {"statusCode": 500, "body": json.dumps({"message": str(e)})}
 
-            if request_data.get("operacion") == "cancelar":
-                user = dynamo.put_item(
-                    TableName="users",
-                    Item={
-                        "cedula": {
-                            "S": request_data.get("cedula")
-                        },
-                        "correo": {
-                            "S": request_data.get("correo")
-                        },
-                        "saldo": {
-                            "N": monto
-                        }
-                    },
-                    ReturnValues= "ALL_OLD" 
-                )
+    elif http_method == "GET":
+        # Espera: queryStringParameters: { user }
+        try:
+            user = None
+            if event.get("queryStringParameters"):
+                user = event["queryStringParameters"].get("user")
+            if not user:
+                return {"statusCode": 400, "body": json.dumps({"message": "Missing user parameter"})}
+            # Buscar transacciones del usuario
+            resp = dynamo.scan(
+                TableName="transactions",
+                FilterExpression="user = :user",
+                ExpressionAttributeValues={":user": {"S": user}}
+            )
+            items = resp.get("Items", [])
+            result = []
+            for item in items:
+                result.append({
+                    "id": item["id"]["S"],
+                    "user": item["user"]["S"],
+                    "fondo": item["fondo"]["S"],
+                    "tipo_transaccion": item["tipo_transaccion"]["S"],
+                    "monto": float(item["monto"]["N"])
+                })
+            return {"statusCode": 200, "body": json.dumps(result)}
+        except Exception as e:
+            return {"statusCode": 500, "body": json.dumps({"message": str(e)})}
