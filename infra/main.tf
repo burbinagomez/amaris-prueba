@@ -1,6 +1,6 @@
 terraform {
   backend "s3" {
-    bucket         = "terraform"
+    bucket         = "terraform-amaris"
     key            = "infra/terraform.tfstate"
     region         = "us-east-2"
     encrypt        = true
