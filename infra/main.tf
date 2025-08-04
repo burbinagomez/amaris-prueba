@@ -74,7 +74,7 @@ resource "aws_dynamodb_table" "transactions" {
 
 # --- IAM Roles for Lambdas ---
 
-resource "aws_iam_role" "lambda_iam_role" {
+resource "aws_iam_role" "lambda_amaris_iam_role" {
   name = "lambda-execution-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -91,7 +91,7 @@ resource "aws_iam_role" "lambda_iam_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_logging" {
-  role       = aws_iam_role.lambda_iam_role.name
+  role       = aws_iam_role.lambda_amaris_iam_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
@@ -128,7 +128,7 @@ resource "aws_lambda_function" "subscribe" {
   function_name    = "subscribe"
   handler          = "subscribe.handler"
   runtime          = "python3.9"
-  role             = aws_iam_role.lambda_iam_role.arn
+  role             = aws_iam_role.lambda_amaris_iam_role.arn
   filename         = "subscribe.zip"
   source_code_hash = filebase64sha256("subscribe.zip")
 
@@ -143,7 +143,7 @@ resource "aws_lambda_function" "transactions" {
   function_name    = "transactions"
   handler          = "transactions.handler"
   runtime          = "python3.9"
-  role             = aws_iam_role.lambda_iam_role.arn
+  role             = aws_iam_role.lambda_amaris_iam_role.arn
   filename         = "transactions.zip"
   source_code_hash = filebase64sha256("transactions.zip")
 
