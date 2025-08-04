@@ -39,7 +39,7 @@ def lambda_handler(event, context):
                 }
             )
             saldo_apertura = 0
-            if apertura_scan["Items"]:
+            if apertura_scan["Items"] and operacion.upper() == "DEPOSITO":
                 saldo_apertura = float(apertura_scan["Items"][0]["monto"]["N"])
             monto_total = monto + saldo_apertura
             # Si es cancelación, sumar el saldo del fondo al saldo del usuario
