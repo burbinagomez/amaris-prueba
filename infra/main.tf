@@ -1,6 +1,16 @@
+terraform {
+  backend "s3" {
+    bucket         = "terraform"
+    key            = "infra/terraform.tfstate"
+    region         = "us-east-2"
+    encrypt        = true
+    dynamodb_table = "terraform-state-locking"
+  }
+}
+
 # Define el proveedor de AWS y la región
 provider "aws" {
-  region = "us-east-1"
+  region = "us-east-2"
 }
 
 # --- DynamoDB Tables ---
