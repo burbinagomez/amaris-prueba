@@ -11,8 +11,6 @@ jobs:
   terraform:
     name: 'Terraform'
     runs-on: ubuntu-latest
-    env:
-      TF_VAR_aws_region: ${{ env.AWS_REGION }}
 
     steps:
       - name: Checkout
