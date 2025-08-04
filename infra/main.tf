@@ -73,6 +73,13 @@ resource "aws_dynamodb_table" "transactions" {
   }
 }
 
+# --- SNS Topic ---
+
+# CORRECCIÓN: Se crea un nuevo tópico de SNS
+resource "aws_sns_topic" "amaris_topic" {
+  name = "amaris"
+}
+
 # --- IAM Roles for Lambdas ---
 
 resource "aws_iam_role" "lambda_amaris_iam_role" {
@@ -97,7 +104,7 @@ resource "aws_iam_role_policy_attachment" "lambda_logging" {
 }
 
 resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
-  name = "lambda-dynamodb-access"
+  name = "lambda-dynamodb-access-and-sns"
   role = aws_iam_role.lambda_amaris_iam_role.id
 
   policy = jsonencode({
@@ -118,6 +125,12 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
           aws_dynamodb_table.fondos.arn,
           aws_dynamodb_table.transactions.arn
         ]
+      },
+      # CORRECCIÓN: Se agregan permisos para publicar en el tópico de SNS
+      {
+        Effect   = "Allow",
+        Action   = "sns:Publish",
+        Resource = aws_sns_topic.amaris_topic.arn
       }
     ]
   })
@@ -141,6 +154,13 @@ resource "aws_lambda_function" "subscribe" {
   role             = aws_iam_role.lambda_amaris_iam_role.arn
   filename         = "subscribe.zip"
   source_code_hash = filebase64sha256("subscribe.zip")
+  
+  # CORRECCIÓN: Se agrega el ARN del tópico de SNS como variable de entorno
+  environment {
+    variables = {
+      SNS_TOPIC_ARN = aws_sns_topic.amaris_topic.arn
+    }
+  }
 }
 
 resource "aws_lambda_function" "transactions" {
@@ -312,7 +332,6 @@ resource "aws_s3_object" "index_html" {
   acl          = "public-read"
   content_type = "text/html"
   
-  # CORRECCIÓN: Agregar un hash al archivo para forzar la actualización en S3
   etag = filemd5("index.html")
 }
 

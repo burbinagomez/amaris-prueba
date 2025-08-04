@@ -1,9 +1,11 @@
 import boto3
 import json
 import uuid
+import os
 
 dynamo = boto3.client('dynamodb')
-# sns = boto3.client('sns')
+sns = boto3.client('sns')
+SNS_TOPIC_ARN = os.getenv("SNS_TOPIC_ARN")
 required_fields = {"cedula", "correo"}
 
 def lambda_handler(event, context):
@@ -24,7 +26,8 @@ def lambda_handler(event, context):
                 }
             }
         )
-        if not user:
+        print(user)
+        if not user.get("Item"):
             user = dynamo.put_item(
                 TableName="users",
                 Item={
@@ -38,7 +41,7 @@ def lambda_handler(event, context):
                         "S": request_data.get("telefono")
                     },
                     "saldo": {
-                        "N": request_data.get("saldo")
+                        "N": str(request_data.get("saldo"))
                     }
                 },
                 ReturnValues= "ALL_OLD" 
@@ -72,9 +75,31 @@ def lambda_handler(event, context):
                         "S": "APERTURA"
                     },
                     "monto": {
-                        "N": request_data.get("saldo")
+                        "N": str(request_data.get("saldo"))
                     }
                 },
                 ReturnValues= "ALL_OLD" 
             )
+
+            message = {
+                "transaction_id": transaction['id']['S'],
+                "user_cedula": user.get("Item", user.get("Attributes")).get("cedula")["S"],
+                "fondo_nombre": fondo.get("Item",{}).get("nombre")["S"]
+            }
+            
+            sns.publish(
+                TopicArn=SNS_TOPIC_ARN,
+                Message=json.dumps({'default': json.dumps(message)}),
+                MessageStructure='json'
+            )
+
+            return {
+                'statusCode': 200,
+                'body': "Apertura creada correctamente, mas informacion sera enviada a su correo"
+            }
+        else:
+            return {
+                'statusCode': 200,
+                'body': f"No tiene saldo disponible para vincularse al fondo {fondo.get('Item',{}).get('nombre')['S']}."
+            }
         
