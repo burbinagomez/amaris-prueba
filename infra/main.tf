@@ -152,164 +152,124 @@ resource "aws_lambda_function" "transactions" {
   source_code_hash = filebase64sha256("transactions.zip")
 }
 
-# --- API Gateway v1 (REST API) ---
+# --- API Gateway v2 (HTTP API) ---
 
-resource "aws_api_gateway_rest_api" "api_gateway" {
-  name = "amaris-api"
+# Define la API Gateway HTTP
+resource "aws_apigatewayv2_api" "api_gateway" {
+  name          = "amaris-http-api"
+  protocol_type = "HTTP"
 }
 
-resource "aws_api_gateway_resource" "fondos_resource" {
-  rest_api_id = aws_api_gateway_rest_api.api_gateway.id
-  parent_id   = aws_api_gateway_rest_api.api_gateway.root_resource_id
-  path_part   = "fondos"
+# Integración para la Lambda 'fondos'
+resource "aws_apigatewayv2_integration" "fondos_integration" {
+  api_id             = aws_apigatewayv2_api.api_gateway.id
+  integration_type   = "AWS_PROXY"
+  integration_uri    = aws_lambda_function.fondos.invoke_arn
+  integration_method = "POST"
 }
 
-resource "aws_api_gateway_method" "fondos_get_method" {
-  rest_api_id   = aws_api_gateway_rest_api.api_gateway.id
-  resource_id   = aws_api_gateway_resource.fondos_resource.id
-  http_method   = "GET"
-  authorization = "NONE"
+# Integración para la Lambda 'subscribe'
+resource "aws_apigatewayv2_integration" "subscribe_integration" {
+  api_id             = aws_apigatewayv2_api.api_gateway.id
+  integration_type   = "AWS_PROXY"
+  integration_uri    = aws_lambda_function.subscribe.invoke_arn
+  integration_method = "POST"
 }
 
-resource "aws_api_gateway_integration" "fondos_integration" {
-  rest_api_id             = aws_api_gateway_rest_api.api_gateway.id
-  resource_id             = aws_api_gateway_resource.fondos_resource.id
-  http_method             = aws_api_gateway_method.fondos_get_method.http_method
-  type                    = "AWS_PROXY"
-  integration_http_method = "GET"
-  uri                     = aws_lambda_function.fondos.invoke_arn
+# Integración para la Lambda 'transactions'
+resource "aws_apigatewayv2_integration" "transactions_integration" {
+  api_id             = aws_apigatewayv2_api.api_gateway.id
+  integration_type   = "AWS_PROXY"
+  integration_uri    = aws_lambda_function.transactions.invoke_arn
+  integration_method = "POST"
 }
 
-resource "aws_api_gateway_resource" "subscribe_resource" {
-  rest_api_id = aws_api_gateway_rest_api.api_gateway.id
-  parent_id   = aws_api_gateway_rest_api.api_gateway.root_resource_id
-  path_part   = "subscribe"
+# Rutas para los endpoints
+resource "aws_apigatewayv2_route" "fondos_route" {
+  api_id    = aws_apigatewayv2_api.api_gateway.id
+  route_key = "GET /fondos"
+  target    = "integrations/${aws_apigatewayv2_integration.fondos_integration.id}"
 }
 
-resource "aws_api_gateway_method" "subscribe_post_method" {
-  rest_api_id   = aws_api_gateway_rest_api.api_gateway.id
-  resource_id   = aws_api_gateway_resource.subscribe_resource.id
-  http_method   = "POST"
-  authorization = "NONE"
+resource "aws_apigatewayv2_route" "subscribe_route" {
+  api_id    = aws_apigatewayv2_api.api_gateway.id
+  route_key = "POST /subscribe"
+  target    = "integrations/${aws_apigatewayv2_integration.subscribe_integration.id}"
 }
 
-resource "aws_api_gateway_integration" "subscribe_integration" {
-  rest_api_id             = aws_api_gateway_rest_api.api_gateway.id
-  resource_id             = aws_api_gateway_resource.subscribe_resource.id
-  http_method             = aws_api_gateway_method.subscribe_post_method.http_method
-  type                    = "AWS_PROXY"
-  integration_http_method = "POST"
-  uri                     = aws_lambda_function.subscribe.invoke_arn
+resource "aws_apigatewayv2_route" "transactions_get_route" {
+  api_id    = aws_apigatewayv2_api.api_gateway.id
+  route_key = "GET /transactions"
+  target    = "integrations/${aws_apigatewayv2_integration.transactions_integration.id}"
 }
 
-resource "aws_api_gateway_resource" "transactions_resource" {
-  rest_api_id = aws_api_gateway_rest_api.api_gateway.id
-  parent_id   = aws_api_gateway_rest_api.api_gateway.root_resource_id
-  path_part   = "transactions"
+resource "aws_apigatewayv2_route" "transactions_post_route" {
+  api_id    = aws_apigatewayv2_api.api_gateway.id
+  route_key = "POST /transactions"
+  target    = "integrations/${aws_apigatewayv2_integration.transactions_integration.id}"
 }
 
-resource "aws_api_gateway_method" "transactions_get_method" {
-  rest_api_id   = aws_api_gateway_rest_api.api_gateway.id
-  resource_id   = aws_api_gateway_resource.transactions_resource.id
-  http_method   = "GET"
-  authorization = "NONE"
-}
+# Despliegue de la API
+resource "aws_apigatewayv2_deployment" "api_deployment" {
+  api_id      = aws_apigatewayv2_api.api_gateway.id
 
-resource "aws_api_gateway_integration" "transactions_get_integration" {
-  rest_api_id             = aws_api_gateway_rest_api.api_gateway.id
-  resource_id             = aws_api_gateway_resource.transactions_resource.id
-  http_method             = aws_api_gateway_method.transactions_get_method.http_method
-  type                    = "AWS_PROXY"
-  integration_http_method = "POST"
-  uri                     = aws_lambda_function.transactions.invoke_arn
-}
-
-resource "aws_api_gateway_method" "transactions_post_method" {
-  rest_api_id   = aws_api_gateway_rest_api.api_gateway.id
-  resource_id   = aws_api_gateway_resource.transactions_resource.id
-  http_method   = "POST"
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_integration" "transactions_post_integration" {
-  rest_api_id             = aws_api_gateway_rest_api.api_gateway.id
-  resource_id             = aws_api_gateway_resource.transactions_resource.id
-  http_method             = aws_api_gateway_method.transactions_post_method.http_method
-  type                    = "AWS_PROXY"
-  integration_http_method = "POST"
-  uri                     = aws_lambda_function.transactions.invoke_arn
-}
-
-resource "aws_api_gateway_deployment" "api_deployment" {
-  rest_api_id = aws_api_gateway_rest_api.api_gateway.id
-  
   triggers = {
     redeployment = sha1(jsonencode([
-      aws_api_gateway_resource.fondos_resource.id,
-      aws_api_gateway_method.fondos_get_method.id,
-      aws_api_gateway_resource.subscribe_resource.id,
-      aws_api_gateway_method.subscribe_post_method.id,
-      aws_api_gateway_resource.transactions_resource.id,
-      aws_api_gateway_method.transactions_get_method.id,
-      aws_api_gateway_method.transactions_post_method.id,
-      aws_api_gateway_integration.fondos_integration.id,
-      aws_api_gateway_integration.subscribe_integration.id,
-      aws_api_gateway_integration.transactions_get_integration.id,
-      aws_api_gateway_integration.transactions_post_integration.id,
+      aws_apigatewayv2_route.fondos_route.id,
+      aws_apigatewayv2_route.subscribe_route.id,
+      aws_apigatewayv2_route.transactions_get_route.id,
+      aws_apigatewayv2_route.transactions_post_route.id,
     ]))
   }
-
-  depends_on = [
-    aws_api_gateway_integration.fondos_integration,
-    aws_api_gateway_integration.subscribe_integration,
-    aws_api_gateway_integration.transactions_get_integration,
-    aws_api_gateway_integration.transactions_post_integration,
-  ]
+  
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
-resource "aws_api_gateway_stage" "dev" {
-  deployment_id = aws_api_gateway_deployment.api_deployment.id
-  rest_api_id   = aws_api_gateway_rest_api.api_gateway.id
-  stage_name    = "dev"
+# Definición explícita del stage para la API
+resource "aws_apigatewayv2_stage" "dev" {
+  api_id        = aws_apigatewayv2_api.api_gateway.id
+  name          = "dev"
+  auto_deploy   = true # Despliega automáticamente los cambios en las rutas e integraciones
+  
+  # Si se usa `auto_deploy`, el `deployment_id` es opcional,
+  # pero si se requiere un despliegue manual, se puede usar
+  # deployment_id = aws_apigatewayv2_deployment.api_deployment.id
 }
 
 # --- Permisos para que API Gateway invoque a las Lambdas (CORREGIDO) ---
-
+# El ARN para API Gateway v2 es diferente
 resource "aws_lambda_permission" "fondos_permission" {
-  statement_id  = "AllowExecutionFromAPIGateway-fondos"
+  statement_id  = "AllowExecutionFromAPIGatewayV2-fondos"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.fondos.function_name
   principal     = "apigateway.amazonaws.com"
   
-  # CORRECCIÓN: Se ajusta el source_arn para incluir los comodines para todos los métodos y recursos
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*"
-  
-  depends_on = [aws_api_gateway_stage.dev]
+  # CORRECCIÓN: Se ajusta el source_arn para el formato de API Gateway v2
+  source_arn = "${aws_apigatewayv2_api.api_gateway.execution_arn}/*"
 }
 
 resource "aws_lambda_permission" "subscribe_permission" {
-  statement_id  = "AllowExecutionFromAPIGateway-subscribe"
+  statement_id  = "AllowExecutionFromAPIGatewayV2-subscribe"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.subscribe.function_name
   principal     = "apigateway.amazonaws.com"
   
-  # CORRECCIÓN: Se ajusta el source_arn para incluir los comodines para todos los métodos y recursos
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*"
-  
-  depends_on = [aws_api_gateway_stage.dev]
+  # CORRECCIÓN: Se ajusta el source_arn para el formato de API Gateway v2
+  source_arn = "${aws_apigatewayv2_api.api_gateway.execution_arn}/*"
 }
 
 resource "aws_lambda_permission" "transactions_permission" {
-  statement_id  = "AllowExecutionFromAPIGateway-transactions"
+  statement_id  = "AllowExecutionFromAPIGatewayV2-transactions"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.transactions.function_name
   principal     = "apigateway.amazonaws.com"
   
-  # CORRECCIÓN: Se ajusta el source_arn para incluir los comodines para todos los métodos y recursos
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*"
-  
-  depends_on = [aws_api_gateway_stage.dev]
+  # CORRECCIÓN: Se ajusta el source_arn para el formato de API Gateway v2
+  source_arn = "${aws_apigatewayv2_api.api_gateway.execution_arn}/*"
 }
+
 
 # --- S3 Static Website ---
 
@@ -360,7 +320,7 @@ resource "aws_s3_object" "index_html" {
 
 output "api_gateway_url" {
   description = "El URL del endpoint de la API Gateway."
-  value       = aws_api_gateway_stage.dev.invoke_url
+  value       = aws_apigatewayv2_stage.dev.invoke_url
 }
 
 output "static_website_url" {
