@@ -236,7 +236,7 @@
                     <td class="py-4 px-6">$${fondo.monto_minimo}</td>
                     <td class="py-4 px-6">
                         <button class="subscribe-button bg-green-500 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-green-600 transition-colors duration-200"
-                                data-id="${fondo.id}" data-name="${fondo.nombre}">Suscribir</button>
+                                data-id="${fondo.id}" data-name="${fondo.nombre}" data-category="${fondo.categoria}">Suscribir</button>
                     </td>
                 `;
                 fondosTableBody.appendChild(row);
@@ -245,6 +245,7 @@
                 button.addEventListener('click', () => {
                     document.getElementById('subscribe-fund-id').value = button.dataset.id;
                     document.getElementById('subscribe-fund-name').textContent = button.dataset.name;
+                    document.getElementById('subscribe-fund-category').textContent = button.dataset.category;
                     subscribeModal.classList.remove('hidden');
                 });
             });
@@ -257,7 +258,12 @@
             const correo = document.getElementById('correo').value;
             const telefono = document.getElementById('telefono').value;
             const saldo = document.getElementById('saldo').value;
-            const fondoId = document.getElementById('subscribe-fund-id').value;
+            const fondo = {
+                nombre: document.getElementById('subscribe-fund-name').value,
+                categoria: document.getElementById('subscribe-fund-category').value
+            }
+            // const fondoId = document.getElementById('subscribe-fund-id').value;
+
 
             const subscriptionData = {
                 cedula,
