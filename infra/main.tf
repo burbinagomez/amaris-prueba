@@ -126,7 +126,7 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
 
 resource "aws_lambda_function" "fondos" {
   function_name    = "fondos"
-  handler          = "fondos.handler"
+  handler          = "fondos.lambda_handler"
   runtime          = "python3.9"
   role             = aws_iam_role.lambda_amaris_iam_role.arn
   filename         = "fondos.zip"
@@ -136,7 +136,7 @@ resource "aws_lambda_function" "fondos" {
 
 resource "aws_lambda_function" "subscribe" {
   function_name    = "subscribe"
-  handler          = "subscribe.handler"
+  handler          = "subscribe.lambda_handler"
   runtime          = "python3.9"
   role             = aws_iam_role.lambda_amaris_iam_role.arn
   filename         = "subscribe.zip"
@@ -146,7 +146,7 @@ resource "aws_lambda_function" "subscribe" {
 
 resource "aws_lambda_function" "transactions" {
   function_name    = "transactions"
-  handler          = "transactions.handler"
+  handler          = "transactions.lambda_handler"
   runtime          = "python3.9"
   role             = aws_iam_role.lambda_amaris_iam_role.arn
   filename         = "transactions.zip"
