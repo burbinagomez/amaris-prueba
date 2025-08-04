@@ -242,9 +242,7 @@ resource "aws_api_gateway_integration" "transactions_post_integration" {
 
 resource "aws_api_gateway_deployment" "api_deployment" {
   rest_api_id = aws_api_gateway_rest_api.api_gateway.id
-
-  # Este bloque 'triggers' asegura que un nuevo despliegue se cree
-  # cada vez que el hash de la API cambie, reflejando nuevas configuraciones
+  
   triggers = {
     redeployment = sha1(jsonencode([
       aws_api_gateway_resource.fondos_resource.id,
@@ -283,10 +281,9 @@ resource "aws_lambda_permission" "fondos_permission" {
   function_name = aws_lambda_function.fondos.function_name
   principal     = "apigateway.amazonaws.com"
   
-  # CORRECCIÓN: Se ajusta el source_arn para incluir el nombre del stage
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*"
+  # CORRECCIÓN: Se ajusta el source_arn para incluir los comodines para todos los métodos y recursos
+  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*/*"
   
-  # CORRECCIÓN: Se agrega una dependencia explícita al stage para evitar errores de temporización
   depends_on = [aws_api_gateway_stage.dev]
 }
 
@@ -296,10 +293,9 @@ resource "aws_lambda_permission" "subscribe_permission" {
   function_name = aws_lambda_function.subscribe.function_name
   principal     = "apigateway.amazonaws.com"
   
-  # CORRECCIÓN: Se ajusta el source_arn para incluir el nombre del stage
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*"
+  # CORRECCIÓN: Se ajusta el source_arn para incluir los comodines para todos los métodos y recursos
+  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*/*"
   
-  # CORRECCIÓN: Se agrega una dependencia explícita al stage para evitar errores de temporización
   depends_on = [aws_api_gateway_stage.dev]
 }
 
@@ -309,10 +305,9 @@ resource "aws_lambda_permission" "transactions_permission" {
   function_name = aws_lambda_function.transactions.function_name
   principal     = "apigateway.amazonaws.com"
   
-  # CORRECCIÓN: Se ajusta el source_arn para incluir el nombre del stage
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*"
+  # CORRECCIÓN: Se ajusta el source_arn para incluir los comodines para todos los métodos y recursos
+  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/${aws_api_gateway_stage.dev.stage_name}/*/*"
   
-  # CORRECCIÓN: Se agrega una dependencia explícita al stage para evitar errores de temporización
   depends_on = [aws_api_gateway_stage.dev]
 }
 
