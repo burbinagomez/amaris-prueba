@@ -96,11 +96,11 @@ def lambda_handler(event, context):
 
             return {
                 'statusCode': 200,
-                'body': "Apertura creada correctamente, mas informacion sera enviada a su correo"
+                'body': ["Apertura creada correctamente, mas informacion sera enviada a su correo"]
             }
         else:
             return {
                 'statusCode': 200,
-                'body': f"No tiene saldo disponible para vincularse al fondo {fondo.get('Item',{}).get('nombre')['S']}."
+                'body': [f"No tiene saldo disponible para vincularse al fondo {fondo.get('Item',{}).get('nombre')['S']}."]
             }
         
