@@ -75,7 +75,7 @@ resource "aws_dynamodb_table" "transactions" {
 # --- IAM Roles for Lambdas ---
 
 resource "aws_iam_role" "lambda_amaris_iam_role" {
-  name = "lambda-execution-role"
+  name = "lambda-amaris-execution-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
