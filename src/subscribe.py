@@ -28,7 +28,7 @@ def lambda_handler(event, context):
         )
         print(user)
         if not user.get("Item"):
-            user = dynamo.put_item(
+            dynamo.put_item(
                 TableName="users",
                 Item={
                     "cedula": {
@@ -44,7 +44,15 @@ def lambda_handler(event, context):
                         "N": str(request_data.get("saldo"))
                     }
                 },
-                ReturnValues= "ALL_OLD" 
+                ReturnValues= "NONE" 
+            )
+            # Volver a obtener el usuario para asegurar que user tenga el formato esperado
+            user = dynamo.get_item(
+                TableName="users",
+                Key={
+                    "cedula": {"S": request_data.get("cedula")},
+                    "correo": {"S": request_data.get("correo")}
+                }
             )
         fondo = dynamo.get_item(
             TableName="fondos",
