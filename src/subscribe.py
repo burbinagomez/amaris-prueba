@@ -80,7 +80,7 @@ def lambda_handler(event, context):
         transaction = transaction_scan["Items"][0] if transaction_scan["Items"] else {}
 
         if not transaction.get("Item"):
-            if request_data.get("saldo") >= fondo.get("Item",{}).get("monto_minimo")["N"]:
+            if request_data.get("saldo") >= float(fondo.get("Item",{}).get("monto_minimo")["N"]):
                 transaction_id = str(uuid.uuid4())
                 transaction = dynamo.put_item(
                     TableName="transactions",
