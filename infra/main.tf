@@ -97,7 +97,7 @@ resource "aws_iam_role_policy_attachment" "lambda_logging" {
 
 resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
   name = "lambda-dynamodb-access"
-  role = aws_iam_role.lambda_iam_role.id
+  role = aws_iam_role.lambda_amaris_iam_role.id
 
   policy = jsonencode({
     Version = "2012-10-17",
