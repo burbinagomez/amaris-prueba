@@ -326,15 +326,6 @@ resource "aws_s3_bucket_website_configuration" "static_website_configuration" {
   }
 }
 
-resource "aws_s3_object" "index_html" {
-  bucket       = aws_s3_bucket.static_website.id
-  key          = "index.html"
-  source       = "index.html"
-  acl          = "public-read"
-  content_type = "text/html"
-  
-  etag = filemd5("index.html")
-}
 
 # --- Outputs ---
 
