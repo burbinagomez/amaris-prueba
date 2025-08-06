@@ -255,3 +255,6 @@ infra/*.zip
 infra/*.tfstate
 infra/*.backup
 infra/*.hcl
+
+front/node_modules/
+front/package-lock.json
